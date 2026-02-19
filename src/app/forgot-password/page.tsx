@@ -1,44 +1,38 @@
 
 import Link from 'next/link'
-import { headers } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
-export default async function Signup({
+export default async function ForgotPassword({
     searchParams,
 }: {
     searchParams: Promise<{ message: string }>
 }) {
     const { message } = await searchParams
 
-    const signUp = async (formData: FormData) => {
+    const resetPassword = async (formData: FormData) => {
         'use server'
 
         const origin = (await headers()).get('origin')
         const email = formData.get('email') as string
-        const password = formData.get('password') as string
         const supabase = await createClient()
 
-        const { error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                emailRedirectTo: `${origin}/auth/callback`,
-            },
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${origin}/auth/callback?next=/dashboard/settings/password`,
         })
 
         if (error) {
-            console.error(error)
-            return redirect(`/signup?message=${encodeURIComponent(error.message)}`)
+            return redirect(`/forgot-password?message=${encodeURIComponent(error.message)}`)
         }
 
-        return redirect('/login?message=Check email to continue sign in process')
+        return redirect('/forgot-password?message=Check your email for the password reset link')
     }
 
     return (
         <div className="container flex flex-col items-center justify-center" style={{ minHeight: '100vh', padding: '2rem' }}>
             <Link
-                href="/"
+                href="/login"
                 className="btn btn-ghost"
                 style={{ position: 'absolute', top: '2rem', left: '2rem', display: 'flex', alignItems: 'center' }}
             >
@@ -56,16 +50,16 @@ export default async function Signup({
                 >
                     <polyline points="15 18 9 12 15 6" />
                 </svg>
-                Back
+                Back to Login
             </Link>
 
             <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Create Account</h1>
-                    <p style={{ color: 'var(--text-secondary)' }}>Get started for free</p>
+                    <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Reset Password</h1>
+                    <p style={{ color: 'var(--text-secondary)' }}>Enter your email to receive a reset link</p>
                 </div>
 
-                <form className="flex flex-col gap-4" action={signUp}>
+                <form className="flex flex-col gap-4" action={resetPassword}>
                     <div>
                         <label className="label" htmlFor="email">
                             Email
@@ -78,30 +72,20 @@ export default async function Signup({
                             required
                         />
                     </div>
-                    <div>
-                        <label className="label" htmlFor="password">
-                            Password
-                        </label>
-                        <input
-                            className="input"
-                            type="password"
-                            name="password"
-                            placeholder="••••••••"
-                            required
-                        />
-                    </div>
 
                     <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
-                        Sign Up
+                        Send Reset Link
                     </button>
 
-                    <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.875rem' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Already have an account? </span>
-                        <Link href="/login">Sign In</Link>
-                    </div>
-
                     {message && (
-                        <div className="badge badge-error" style={{ width: '100%', padding: '1rem', marginTop: '1rem', justifyContent: 'center' }}>
+                        <div className="badge" style={{
+                            width: '100%',
+                            padding: '1rem',
+                            marginTop: '1rem',
+                            justifyContent: 'center',
+                            backgroundColor: message.includes('Check') ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                            color: message.includes('Check') ? 'var(--brand-success)' : 'var(--brand-error)'
+                        }}>
                             {message}
                         </div>
                     )}

@@ -1,6 +1,5 @@
 
 import Link from 'next/link'
-import { headers } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 
@@ -24,34 +23,10 @@ export default async function Login({
         })
 
         if (error) {
-            return redirect('/login?message=Could not authenticate user')
-        }
-
-        return redirect('/dashboard')
-    }
-
-    const signUp = async (formData: FormData) => {
-        'use server'
-
-        const origin = (await headers()).get('origin')
-        const email = formData.get('email') as string
-        const password = formData.get('password') as string
-        const supabase = await createClient()
-
-        const { error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                emailRedirectTo: `${origin}/auth/callback`,
-            },
-        })
-
-        if (error) {
-            console.error(error)
             return redirect(`/login?message=${encodeURIComponent(error.message)}`)
         }
 
-        return redirect('/login?message=Check email to continue sign in process')
+        return redirect('/dashboard')
     }
 
     return (
@@ -98,9 +73,14 @@ export default async function Login({
                         />
                     </div>
                     <div>
-                        <label className="label" htmlFor="password">
-                            Password
-                        </label>
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="label" htmlFor="password" style={{ marginBottom: 0 }}>
+                                Password
+                            </label>
+                            <Link href="/forgot-password" style={{ fontSize: '0.75rem' }}>
+                                Forgot Password?
+                            </Link>
+                        </div>
                         <input
                             className="input"
                             type="password"
@@ -114,13 +94,10 @@ export default async function Login({
                         Sign In
                     </button>
 
-                    <button
-                        formAction={signUp}
-                        className="btn btn-secondary"
-                        style={{ width: '100%' }}
-                    >
-                        Sign Up
-                    </button>
+                    <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.875rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Don't have an account? </span>
+                        <Link href="/signup">Sign Up</Link>
+                    </div>
 
                     {message && (
                         <div className="badge badge-error" style={{ width: '100%', padding: '1rem', marginTop: '1rem', justifyContent: 'center' }}>
