@@ -4,7 +4,20 @@ import { useState } from 'react';
 import styles from './alt-text.module.css';
 
 // Mock review items — will be replaced with Supabase queries
-const mockReviewItems = [
+interface ReviewItem {
+    id: string;
+    image_hash: string;
+    thumbnail_url: string;
+    ai_generated_alt: string;
+    final_alt: string | null;
+    is_decorative: boolean;
+    status: 'pending' | 'approved' | 'edited';
+    page_number: number;
+    source_file: string;
+    occurrences: number;
+}
+
+const mockReviewItems: ReviewItem[] = [
     {
         id: '1',
         image_hash: 'e09208c0',
@@ -12,7 +25,7 @@ const mockReviewItems = [
         ai_generated_alt: 'East Texas A&M University Lion Head Logo — A stylized golden lion head with a mane, centered on a circular blue background with the university name arched above.',
         final_alt: null,
         is_decorative: false,
-        status: 'pending' as const,
+        status: 'pending',
         page_number: 1,
         source_file: 'syllabus_2026_spring.pdf',
         occurrences: 500,
@@ -24,7 +37,7 @@ const mockReviewItems = [
         ai_generated_alt: 'A thin horizontal decorative line separator, approximately 1 pixel in height.',
         final_alt: null,
         is_decorative: true,
-        status: 'pending' as const,
+        status: 'pending',
         page_number: 3,
         source_file: 'annual_report.pdf',
         occurrences: 972,
@@ -36,7 +49,7 @@ const mockReviewItems = [
         ai_generated_alt: 'Live Chat icon — A speech bubble icon in blue with three dots inside, indicating an active chat feature.',
         final_alt: null,
         is_decorative: false,
-        status: 'pending' as const,
+        status: 'pending',
         page_number: 12,
         source_file: 'course_catalog.pdf',
         occurrences: 170,
@@ -47,7 +60,7 @@ type FilterTab = 'all' | 'pending' | 'approved' | 'edited';
 
 export default function AltTextReviewPage() {
     const [filter, setFilter] = useState<FilterTab>('pending');
-    const [items, setItems] = useState(mockReviewItems);
+    const [items, setItems] = useState<ReviewItem[]>(mockReviewItems);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editText, setEditText] = useState('');
 
@@ -60,7 +73,7 @@ export default function AltTextReviewPage() {
         setItems(prev =>
             prev.map(item =>
                 item.id === id
-                    ? { ...item, status: 'approved' as const, final_alt: item.ai_generated_alt }
+                    ? { ...item, status: 'approved' as const, final_alt: item.ai_generated_alt } as ReviewItem
                     : item
             )
         );

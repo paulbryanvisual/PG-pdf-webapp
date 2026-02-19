@@ -3,12 +3,23 @@
 import { useState } from 'react';
 
 // Mock schedule data
-const mockSchedules = [
+interface Schedule {
+    id: string;
+    connection_label: string;
+    remote_path: string;
+    file_handling: 'replace' | 'rename_old' | 'rename_new';
+    cron_schedule: string;
+    is_active: boolean;
+    last_run_at: string | null;
+    files_processed: number;
+}
+
+const mockSchedules: Schedule[] = [
     {
         id: '1',
         connection_label: 'Main Website (etamu.edu)',
         remote_path: '/public_html/documents/',
-        file_handling: 'replace' as const,
+        file_handling: 'replace',
         cron_schedule: '0 * * * *',
         is_active: true,
         last_run_at: '35 minutes ago',
@@ -17,7 +28,7 @@ const mockSchedules = [
 ];
 
 export default function SchedulesPage() {
-    const [schedules, setSchedules] = useState(mockSchedules);
+    const [schedules, setSchedules] = useState<Schedule[]>(mockSchedules);
     const [showNew, setShowNew] = useState(false);
     const [newPath, setNewPath] = useState('/public_html/documents/');
     const [newHandling, setNewHandling] = useState<'replace' | 'rename_old' | 'rename_new'>('replace');

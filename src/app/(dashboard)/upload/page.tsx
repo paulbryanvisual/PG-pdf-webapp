@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useCallback, DragEvent, ChangeEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import { createBrowserClient } from '@supabase/ssr';
 import styles from './upload.module.css';
 
 interface UploadedFile {
@@ -78,15 +80,89 @@ export default function UploadPage() {
         return sum + base + (skipImages ? 0 : 1);
     }, 0);
 
+    const router = useRouter();
+    const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
     const handleSubmit = async () => {
         if (files.length === 0) return;
         setIsSubmitting(true);
 
-        // TODO: Implement actual upload to Supabase Storage + create job
-        await new Promise(r => setTimeout(r, 2000));
+        try {
+            // 1. Create Job ID
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("User not authenticated");
 
-        setIsSubmitting(false);
-        alert('Upload coming soon! Backend integration pending.');
+            const { data: job, error: jobError } = await supabase
+                .from('jobs')
+                .insert({
+                    profile_id: user.id,
+                    status: 'pending',
+                    source_type: 'upload',
+                    options: {
+                        aiProvider,
+                        fastMode,
+                        skipImages,
+                        fileHandling
+                    }
+                })
+                .select()
+                .single();
+
+            if (jobError) throw jobError;
+            if (!job) throw new Error("Failed to create job");
+
+            // 2. Upload Files & Create Job File Records
+            for (const fileObj of files) {
+                const file = fileObj.file;
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+                const filePath = `${user.id}/${job.id}/${fileName}`;
+
+                // Upload
+                const { error: uploadError } = await supabase.storage
+                    .from('uploads')
+                    .upload(filePath, file);
+
+                if (uploadError) throw uploadError;
+
+                // Record
+                const { error: fileRecordError } = await supabase
+                    .from('job_files')
+                    .insert({
+                        job_id: job.id,
+                        filename: file.name,
+                        status: 'pending',
+                        input_storage_path: filePath,
+                        file_size: file.size
+                    });
+
+                if (fileRecordError) throw fileRecordError;
+            }
+
+            // 3. Trigger Backend Processing
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/process-job`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jobId: job.id })
+            });
+
+            if (!res.ok) {
+                console.error("Backend process triggering failed", await res.text());
+                // Don't fail the UI flow, the job is created/queued
+            }
+
+            // 4. Redirect to Job Details
+            router.push(`/jobs/${job.id}`);
+
+        } catch (err) {
+            console.error(err);
+            alert(`Error creating job: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
